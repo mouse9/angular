@@ -1,0 +1,576 @@
+<tv3-spinner *ngIf="showSpinner" class="text-center" spinnerSrc="{{appSharedService.gwaPath}}/images/loader-blue.svg"
+  logoSrc="{{appSharedService.gwaPath}}/images/loader-logo.svg">
+</tv3-spinner>
+<!-- Main form starts here -->
+<article class="container-fluid py-16" id="scrollTop">
+  <tv3-alert class="my-16" *ngIf="apiErrorMessage">
+    Some error occurred: Please retry the operation
+  </tv3-alert>
+
+  <form [formGroup]="sharedFilesForm" [ngClass]="{'d-none': showSpinner}">
+    <section class="row">
+      <div class="col-12">
+        <p>Securely upload files to process a transaction or make changes to your account.</p>
+      </div>
+    </section>
+    <section class="row my-16 align-items-center">
+      <div class="col-md-4 col-sm-12">
+        <!-- <tv3-dropdown-list formControlName="folderId" *ngIf="folderList?.length > 0" item-list="folder-list">
+          <datalist id="folder-list">
+            <option [value]="folder?.folderId" *ngFor="let folder of folderList">{{folder?.folderName}}
+              ({{folder?.unreadFilesCount}})</option>
+          </datalist>
+        </tv3-dropdown-list> -->
+        <div class="my-32" *ngIf="folderListData?.length > 0">
+          <tv3-dropdown-list slot="field" formControlName="folderId" [itemData]='folderListData'>
+          </tv3-dropdown-list>
+        </div>
+      </div>
+      <div class="col-md-4 col-sm-12">
+        <tv3-cta role="button" (click)="uploadFileModal.toggle()">Upload Files</tv3-cta>
+      </div>
+    </section>
+    <section class="row align-items-center">
+      <div class="col-md-8 col-sm-12 ">
+        <tv3-cta href="javascript:void(0)" cta-type="link" text class="pr-8" (click)="addFolderModal.toggle();">Add
+          Folder
+          <span slot="prefix">
+            <tv3-icon icon="plus"></tv3-icon>
+          </span>
+        </tv3-cta>
+        <tv3-cta href="javascript:void(0)" cta-type="link" text class="vertical-line pr-8 pl-4"
+          [disabled]="isRestrictedFolder()" (click)="removeFolderModal.toggle();">Remove Folder
+          <span slot="prefix">
+            <tv3-icon icon="close"></tv3-icon>
+          </span>
+        </tv3-cta>
+        <tv3-cta href="javascript:void(0)" cta-type="link" text class="vertical-line pr-8 pl-4"
+          [disabled]="isRestrictedFolder()" (click)="openRenameFolderModal()">Rename Folder
+          <span slot="prefix">
+            <tv3-icon icon="window"></tv3-icon>
+          </span>
+        </tv3-cta>
+        <tv3-cta href="javascript:void(0)" cta-type="link" text class="vertical-line pl-4"
+          [disabled]="isRestrictedFolder()" (click)="openFolderDetailsModal()">Folder Details
+          <span slot="prefix">
+            <tv3-icon icon="document"></tv3-icon>
+          </span>
+        </tv3-cta>
+      </div>
+      <div class="col-md-4 col-sm-12">
+        <tv3-input formControlName="searchFileName" placeholder="Search"> </tv3-input>
+      </div>
+    </section>
+    <section class="row my-24">
+      <div class="col-12">
+        <tv3-table variant="review">
+          <table>
+            <thead>
+              <tr class="table-column-header">
+                <th scope="col" class="w-5"></th>
+                <th scope="col" class="w-30" [appSort]="displayFileList" data-order="asc" data-name="fileLabel"
+                  #tableFileName (click)="gettableFileName()">
+                  <a href="javascript:void(0)" role="button" class="tabulator-header-cell-content">
+                    <span>File Name</span>
+                    <ng-container *ngIf="fileNameSortDescOrder">
+                      <tv3-icon icon="sort-down" class="scale-10 pr-4 pt-4"></tv3-icon>
+                    </ng-container>
+                    <ng-container *ngIf="fileNameSortAscOrder">
+                      <tv3-icon icon="sort-up" class="scale-10 pr-4 pt-4"></tv3-icon>
+                    </ng-container>
+                  </a>
+                </th>
+                <th scope="col" class="w-30" [appSort]="displayFileList" data-order="asc" data-name="createdBy"
+                  #tableAddedBy (click)="gettableAddedBy()">
+                  <a href="javascript:void(0)" role="button" class="tabulator-header-cell-content">
+                    <span>Added By</span>
+                    <ng-container *ngIf="addedBySortDescOrder">
+                      <tv3-icon icon="sort-down" class="scale-10 pr-4 pt-4"></tv3-icon>
+                    </ng-container>
+                    <ng-container *ngIf="addedBySortAscOrder">
+                      <tv3-icon icon="sort-up" class="scale-10 pr-4 pt-4"></tv3-icon>
+                    </ng-container>
+                  </a>
+                </th>
+                <th scope="col" class="w-20" [appSort]="displayFileList" data-order="desc" data-type="date"
+                  data-name="createdDate" #tableDateAdded (click)="gettableDateAdded()">
+                  <a href="javascript:void(0)" role="button" class="tabulator-header-cell-content">
+                    <span>Date Added</span>
+                    <ng-container *ngIf="dateAddedSortDescOrder">
+                      <tv3-icon icon="sort-down" class="scale-10 pr-4 pt-4"></tv3-icon>
+                    </ng-container>
+                    <ng-container *ngIf="dateAddedSortAscOrder">
+                      <tv3-icon icon="sort-up" class="scale-10 pr-4 pt-4"></tv3-icon>
+                    </ng-container>
+                  </a>
+                </th>
+                <th scope="col" class="w-15 text-cta-link-primary">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <ng-container *ngIf="displayFileList?.length > 0">
+                <tr *ngFor="let row of displayFileList;let i = index" class="border-bottom-thinner">
+                  <td class="w-5">
+                    <tv3-cta href="javascript:void(0)" class="scale-lg-24" cta-type="link" text
+                      (click)="onClickMarkAsFavorite($event, row)" title="Mark Document as Favorite">
+                      <span slot="suffix">
+                        <tv3-icon unresolved *ngIf="row.markedFavorite === 'true'" icon="star-filled"></tv3-icon>
+                        <tv3-icon unresolved *ngIf="row.markedFavorite !== 'true'" icon="star-empty"></tv3-icon>
+                      </span>
+                    </tv3-cta>
+                  </td>
+                  <td class="w-30">
+                    <ng-container *ngIf="row.fileRead === false">
+                      <div class="font-weight-bold">
+                        <div>{{row.fileLabel.split('.')[0]}} ({{row.fileExtension}})</div>
+                        <div *ngIf="row.submitFlag === true">
+                          <div class="paragraph-small">SUBMITTED FOR PROCESSING </div>
+                        </div>
+                      </div>
+                    </ng-container>
+                    <ng-container *ngIf="row.fileRead === true">
+                      <div>{{row.fileLabel.split('.')[0]}} ({{row.fileExtension}})</div>
+                      <div *ngIf="row.submitFlag === true">
+                        <div class="paragraph-small">SUBMITTED FOR PROCESSING </div>
+                      </div>
+                    </ng-container>
+                  </td>
+                  <td class="w-30">{{row.createdBy}}</td>
+                  <td class="w-20">{{row.createdDate}}</td>
+                  <td class="w-15">
+                    <ng-container *ngIf="fileKababMenu">
+                      <tv3-dropdown-list slot="field" formControlName="fileKababMenu" [itemData]='dropDownMenu'
+                        (_change)="onClickKababMenuChange($event, row)" (click)="onClickKababMenu($event, row)"
+                        variant="restoreDefaults">
+                        <tv3-icon slot="value" svg="{{appSharedService.gwaPath}}/images/brando/icon-contextual.svg"
+                          variant="icon-dropdown"></tv3-icon>
+                      </tv3-dropdown-list>
+                    </ng-container>
+                    <ng-container *ngIf="trashFileKababMenu">
+                      <tv3-form-field id="dropdownlist-icon" class="col-md-4">
+                        <tv3-dropdown-list slot="field" name="icon_example" formControlName="fileKababMenu"
+                          item-list="dropdown-item-list-trashDropDownMenu"
+                          (_change)="onClickTrashKababMenuChange($event, row)" (click)="onClickKababMenu($event, row)"
+                          variant="restoreDefaults">
+                          <datalist id="dropdown-item-list-trashDropDownMenu">
+                            <option *ngFor="let item of trashDropDownMenu" [value]="item.value">
+                              {{item.value}}</option>
+                          </datalist>
+                          <tv3-icon slot="value" svg="{{appSharedService.gwaPath}}/images/brando/icon-contextual.svg"
+                            variant="icon-dropdown"></tv3-icon>
+                        </tv3-dropdown-list>
+                      </tv3-form-field>
+                    </ng-container>
+                  </td>
+                </tr>
+              </ng-container>
+              <tr class="border-bottom-thinner" *ngIf="displayFileList?.length === 0">
+                <td colspan="5" class="text-center font-italic">You currently have no files.</td>
+              </tr>
+            </tbody>
+          </table>
+        </tv3-table>
+      </div>
+    </section>
+  </form>
+</article>
+<!-- Main form ends here -->
+
+<!-- Upload files lightbox starts here -->
+<tv3-lightbox id="uploadFileModal" size="large" #uploadFileModal static (opened)="onOpenUploadFileModal()"
+  (closed)="onClickCloseUploadFileModal($event)">
+  <app-upload-files *ngIf="isUploadFileModalOpened" [sharedFilesData]="sharedFilesData"
+    (close)="onCloseUploadFileModal($event)"></app-upload-files>
+</tv3-lightbox>
+
+<!-- Add folder lightbox starts here -->
+<tv3-lightbox size="small" title="Add Folder" #addFolderModal static hide-close>
+  <article class="p-32">
+    <form class="m-0" [formGroup]="sharedFilesForm">
+      <tv3-form>
+        <h2 class="heading-medium mb-16">Add Folder</h2>
+        <section class="row mb-16">
+          <div class="col-12">
+            <tv3-form-field class="mb-16">
+              <span slot="label">Folder Name</span>
+              <tv3-input mask="filename" class="foldername" maxlength="30" slot="field" placeholder="Enter Folder Name"
+                formControlName="newFolderName">
+              </tv3-input>
+              <tv3-alert *ngIf="showAPISerValidationErrMsg">
+                {{apiValidationErrorMsg}} .
+              </tv3-alert>
+              <tv3-alert *ngIf="showAddFolderErrMsg">
+                Folder with the same name already exists. Please choose another name.
+              </tv3-alert>
+            </tv3-form-field>
+          </div>
+        </section>
+        <section class="row text-center">
+          <div class="col-12">
+            <tv3-cta variant="secondary" (click)="cancelAddFolder()" class="mr-32">Cancel</tv3-cta>
+            <tv3-cta (click)="addNewFolder()">Add Folder</tv3-cta>
+          </div>
+        </section>
+      </tv3-form>
+    </form>
+  </article>
+</tv3-lightbox>
+<!-- Add folder lightbox ends here -->
+
+<!-- Move row lightbox starts here -->
+<tv3-lightbox size="small" #moveFileModal static hide-close>
+  <article class="p-32">
+    <form class="m-0" [formGroup]="sharedFilesForm">
+      <tv3-form>
+        <h2 class="heading-medium mb-16">Move File</h2>
+        <section class="row mb-16">
+          <div class="col-12" *ngIf="moveFolderOptions?.length > 0">
+            <tv3-form-field class="my-16" id="dropdownlist-uploadFiles">
+              <tv3-dropdown-list slot="field" (click)="openDropdown()" #dropdownlistitems formControlName="moveTargetFolderId" placeholder="Select Folder"
+                item-list="dropdown-item-list-moveFiles">
+                <datalist id="dropdown-item-list-moveFiles">
+                  <option [value]="folder?.folderId" *ngFor="let folder of moveFolderOptions">{{folder?.folderName}}
+                  </option>
+                </datalist>
+              </tv3-dropdown-list>
+              <span slot="label">Move selected file to folder:</span>
+              <tv3-alert *ngIf="showAPISerValidationErrMsg">
+                {{apiValidationErrorMsg}} .
+              </tv3-alert>
+            </tv3-form-field>
+          </div>
+        </section>
+        <section class="row text-center">
+          <div class="col-12">
+            <tv3-cta variant="secondary" (click)="closeMoveFile()" class="mr-32">Close</tv3-cta>
+            <tv3-cta (click)="moveFileToOtherFolder(fileRowDetails)">Move File</tv3-cta>
+          </div>
+        </section>
+      </tv3-form>
+    </form>
+  </article>
+</tv3-lightbox>
+<!-- Move row lightbox ends here -->
+
+<!-- Delete row lightbox starts here -->
+<tv3-lightbox size="small" #deletePermanentlyRowModal static hide-close>
+  <article class="p-32">
+    <form class="m-0">
+      <h2 class="heading-medium mb-16">Warning</h2>
+      <section class="row mb-16">
+        <div class="col-12">
+          <tv3-alert type="attention">
+            <span class="font-weight-bold">Warning:</span> Once you permanently delete a file, you will not be able to
+            undo this action.
+          </tv3-alert>
+          <p class="font-weight-bold my-16 text-center">Do you want to proceed?</p>
+        </div>
+      </section>
+      <section class="row text-center">
+        <div class="col-12">
+          <tv3-cta variant="secondary" (click)="deletePermanentlyRowModal.toggle();" class="mr-32">No</tv3-cta>
+          <tv3-cta (click)="deleteFilePermanently(fileRowDetails)">Yes</tv3-cta>
+        </div>
+      </section>
+    </form>
+  </article>
+</tv3-lightbox>
+<!-- Delete row lightbox ends here -->
+
+<!-- Rename folder lghtbox starts here -->
+<tv3-lightbox size="small" #renameFolderModal static hide-close>
+  <article class="p-32">
+    <form class="m-0" [formGroup]="sharedFilesForm">
+      <tv3-form>
+        <h2 class="heading-medium mb-16">Rename Folder</h2>
+        <section class="row mb-16">
+          <div class="col-12">
+            <tv3-form-field class="my-16">
+              <span slot="label">Folder Name</span>
+              <tv3-input mask="filename" class="foldername" maxlength="30" slot="field" formControlName="newRenameFolderName">
+              </tv3-input>
+              <tv3-alert *ngIf="showAPISerValidationErrMsg">
+                {{apiValidationErrorMsg}}
+              </tv3-alert>
+              <tv3-alert *ngIf="errorMsgRenameFolder">
+                Folder with the same name already exists. Please choose another name.
+              </tv3-alert>
+            </tv3-form-field>
+          </div>
+        </section>
+        <section class="row text-center">
+          <div class="col-12">
+            <tv3-cta variant="secondary" (click)="cancelRenameFolder()" class="mr-32">Cancel</tv3-cta>
+            <tv3-cta (click)="renameFolderName()">Rename Folder</tv3-cta>
+          </div>
+        </section>
+      </tv3-form>
+    </form>
+  </article>
+</tv3-lightbox>
+<!-- Rename folder lightbox ends here -->
+
+<!-- Remove folder lightbox starts here -->
+<tv3-lightbox size="small" #removeFolderModal static hide-close>
+  <article class="p-32">
+    <form class="m-0">
+      <h2 class="heading-medium mb-16">Delete Confirmation</h2>
+      <section class="row mb-16">
+        <div class="col-12">
+          <tv3-alert type="attention">
+            <span class="font-weight-bold">Warning:</span> You are about to delete this folder.
+            Any files in this folder will be moved to Trash.
+          </tv3-alert>
+          <p class="font-weight-bold my-16 text-center">Do you want to proceed?</p>
+        </div>
+      </section>
+      <section class="row text-center">
+        <div class="col-12">
+          <tv3-cta variant="secondary" (click)="removeFolderModal.toggle();" class="mr-32">No</tv3-cta>
+          <tv3-cta (click)="removeFolder()">Yes</tv3-cta>
+        </div>
+      </section>
+    </form>
+  </article>
+</tv3-lightbox>
+<!-- Remove folder lightbox ends here -->
+
+<!-- Folder details lightbox starts here -->
+<tv3-lightbox #folderDetailsModal size="small" static hide-close>
+  <article class="p-32" *ngIf="folderDetails.folderName?.length > 0">
+    <form class="m-0">
+      <h2 class="heading-medium mb-16">Folder Details</h2>
+      <section class="row mb-8">
+        <div class="col-6 text-right"> <label>Folder Name:</label></div>
+        <div class="col-6"> {{folderDetails.folderName}}</div>
+      </section>
+      <section class="row mb-8">
+        <div class="col-6 text-right"> <label>Files:</label></div>
+        <div class="col-6">{{folderDetails.filesCount}}</div>
+      </section>
+      <section class="row mb-8">
+        <div class="col-6 text-right"> <label>Created By:</label></div>
+        <div class="col-6">{{folderDetails.createdBy}}</div>
+      </section>
+      <section class="row mb-16">
+        <div class="col-6 text-right"> <label>Created Date:</label></div>
+        <div class="col-6">{{folderDetails.createdDate}}</div>
+      </section>
+      <section class="row text-center">
+        <div class="col-12">
+          <tv3-cta variant="secondary" (click)="folderDetailsModal.toggle();">Close</tv3-cta>
+        </div>
+      </section>
+    </form>
+  </article>
+</tv3-lightbox>
+<!-- Folder details lightbox ends here -->
+
+<!-- Submit for Processing lightbox starts here -->
+<tv3-lightbox #submitForProcessingModal size="large" static hide-close>
+  <article class="p-32">
+    <form class="m-0" [formGroup]="sharedFilesForm">
+      <h2 class="heading-medium">Submit for Processing</h2>
+      <section class="row mt-24">
+        <div class="col-12">
+          <p class="my-16">Only use this to send file to TIAA to process a form or securities transaction.</p>
+          <p class="font-weight-bold my-16">I am uploading files that are being used to process a transaction or make
+            changes to my account.</p>
+          <p class="my-16">You have selected the following file to be submitted for processing:</p>
+          <tv3-table variant="review" class="py-16">
+            <table>
+              <thead>
+                <tr class="table-column-header">
+                  <th scope="col">
+                    <span class="cell-content">File Name</span>
+                  </th>
+                  <th scope="col">
+                    <span class="cell-content">Type</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="w-45 py-8">{{selectedFile?.fileLabel}}</td>
+                  <td class="w-55 py-8">{{selectedFile?.fileExtension}}</td>
+                </tr>
+              </tbody>
+            </table>
+          </tv3-table>
+        </div>
+      </section>
+      <section class="row">
+        <div class="col-12">
+          <div>
+            <div class="my-16">Add optional special handling instructions for this upload <span
+                class="font-weight-bold ml-4">(250 character limit)</span>
+            </div>
+            <div>
+              <tv3-input slot="field" textarea placeholder="Enter in text area"
+                formControlName="specialHandlingInstructions" maxlength="250">
+              </tv3-input>
+            </div>
+          </div>
+          <div class="heading-small font-weight-bold mt-16">Terms of Use</div>
+          <div class="py-16">
+            <p>In the event you are uploading file(s) required by TIAA to process a transaction that you previously
+              initiated, you agree to continue to be bound by the terms and conditions that were explained to you, and
+              you accepted, when you initiated the transaction. Original documents may be required for certain
+              transactions, such as transfer/rollover requests. If you have any questions, please call our National
+              Contact Center (800-842-2776), your assigned advisor, or your current carrier to determine if originals
+              are required for this transaction.</p>
+          </div>
+          <div class="background-container-messaging p-16">
+            <tv3-checkbox formControlName="termsOfUseForSubmitProcessing">
+              <label slot="label">I have read and accept these Terms of Use.</label>
+            </tv3-checkbox>
+            <tv3-alert *ngIf="termsOfUseForSubmitProcessingAlert">
+              Terms of Use should be checked
+            </tv3-alert>
+          </div>
+          <p class="mt-16">
+            <a href="javascript:void(0)" (click)="termsAndConditionsForSubmitProcessingModal.toggle()">READ SHARED FILES
+              TERMS AND CONDITIONS</a>
+          </p>
+        </div>
+      </section>
+    </form>
+  </article>
+  <span slot="footer">
+    <div class="py-16">
+      <tv3-cta variant="secondary" (click)="cancelSubmitForProcessingModal()" class="ml-32">Cancel</tv3-cta>
+      <tv3-cta (click)="onClickSubmitProcessing(selectedFile)" class="float-right mr-32">Submit</tv3-cta>
+    </div>
+  </span>
+</tv3-lightbox>
+<!-- Submit for Processing lightbox ends here -->
+
+<!-- Submit for Processing Terms and Condition lightbox starts here -->
+<tv3-lightbox size="medium" #termsAndConditionsForSubmitProcessingModal static>
+  <!-- <tv3-scrollable container-height="600"> -->
+    <section class="p-32" [innerHTML]="termsCondtions | safeHtml"></section>
+  <!-- </tv3-scrollable> -->
+</tv3-lightbox>
+<!-- Submit for Processing Terms and Condition lightbox ends here -->
+
+<!-- Edit File Name lightbox starts here -->
+<tv3-lightbox size="small" #editFileNameModal static hide-close>
+  <article class="p-32">
+    <form class="m-0" [formGroup]="sharedFilesForm">
+      <tv3-form>
+        <h2 class="heading-medium mb-16">Edit File</h2>
+        <section class="row mb-16">
+          <div class="col-12">
+            <tv3-form-field class="my-16">
+              <span slot="label">File Name: </span>
+              <tv3-input mask="filename" class="filename" maxlength="70" slot="field" formControlName="newFileName">
+              </tv3-input>
+              <tv3-alert *ngIf="errorMsgMissingFileName">
+                Missing file name, Please choose a name.
+              </tv3-alert>
+              <tv3-alert *ngIf="errorMsgEditFileName">
+                File with the same name already exists. Please choose another name.
+              </tv3-alert>
+            </tv3-form-field>
+          </div>
+        </section>
+        <section class="row text-center">
+          <div class="col-12">
+            <tv3-cta variant="secondary" (click)="cancelEditFileName()" class="mr-32">Cancel</tv3-cta>
+            <tv3-cta (click)="editFileName(fileRowDetails)">Save</tv3-cta>
+          </div>
+        </section>
+      </tv3-form>
+    </form>
+  </article>
+</tv3-lightbox>
+<!-- Edit File Name lightbox ends here -->
+
+<!-- Upload Confirm lightbox starts here -->
+<tv3-lightbox size="large" #confirmUploadModal static hide-close>
+  <article class="p-32">
+    <form class="m-0">
+      <h2 class="heading-medium mb-16">Upload File(s)</h2>
+      <section class="row mb-16">
+        <div class="col-12">
+          <p>The following file(s) have successfully uploaded:</p>
+          <ul component="tv3-list" variant="bulleted" class="mt-16"
+            *ngFor="let fileName of uploadedFilesList; let i = index">
+            <li>{{fileName}}</li>
+          </ul>
+          <p *ngIf="processingOption === 'no'"><span class="font-weight-bold">Please note:</span> sharing a file with
+            your Advisor or other team member is not the same as submitting the file for processing. Forms or other
+            information necessary to complete a transaction or account update may be submitted for processing if deemed
+            necessary by TIAA.</p>
+        </div>
+      </section>
+      <section class="row text-center">
+        <div class="col-12">
+          <tv3-cta (click)="closeConfirmationModal(folderId)">Close</tv3-cta>
+        </div>
+      </section>
+    </form>
+  </article>
+</tv3-lightbox>
+<!-- Upload Confirm lightbox ends here -->
+
+<!-- Restore file lightbox starts here -->
+<tv3-lightbox size="small" #restoreFileModal static hide-close>
+  <article class="p-32">
+    <form class="m-0" [formGroup]="sharedFilesForm">
+      <tv3-form>
+        <h2 class="heading-medium mb-16">Restore File</h2>
+        <section class="row mb-16">
+          <div class="col-12" *ngIf="moveFolderOptions?.length > 0">
+            <tv3-form-field class="my-16" id="dropdownlist-restoreFile">
+              <tv3-dropdown-list slot="field" formControlName="restoreTargetFolderId" placeholder="Select Folder"
+                item-list="dropdown-item-list-restoreFile">
+                <datalist id="dropdown-item-list-restoreFile">
+                  <option [value]="folder?.folderId" *ngFor="let folder of moveFolderOptions">{{folder?.folderName}}
+                  </option>
+                </datalist>
+              </tv3-dropdown-list>
+              <span slot="label">Restore selected file to folder:</span>
+              <tv3-alert *ngIf="sharedFilesForm.get('restoreTargetFolderId')?.value === '' && showAlert">
+                Please select folder name from dropdown.
+              </tv3-alert>
+              <tv3-alert *ngIf="showAPISerValidationErrMsg">
+                {{apiValidationErrorMsg}} .
+              </tv3-alert>
+            </tv3-form-field>
+          </div>
+        </section>
+        <section class="row text-center">
+          <div class="col-12">
+            <tv3-cta variant="secondary" (click)="closeRestoreFile()" class="mr-32">Close</tv3-cta>
+            <tv3-cta (click)="restoreFileToOtherFolder(fileRowDetails)">Restore File</tv3-cta>
+          </div>
+        </section>
+      </tv3-form>
+    </form>
+  </article>
+</tv3-lightbox>
+<!-- Restore file lightbox ends here -->
+
+<!-- Confirm Submit For Processing lightbox starts here -->
+<tv3-lightbox size="large" #confirmSubmitForProcessingModal static hide-close>
+  <article class="p-32">
+    <form class="m-0">
+      <h2 class="heading-medium mb-16">Submit For Processing</h2>
+      <section class="row mb-16">
+        <div class="col-12">
+          <p>The following file have successfully been Submitted For Processing:</p>
+          <ul component="tv3-list" variant="bulleted" class="mt-16">
+            <li>{{fileDetails}}</li>
+          </ul>
+        </div>
+      </section>
+      <section class="row text-center">
+        <div class="col-12">
+          <tv3-cta variant="secondary" (click)="confirmSubmitForProcessingModal.toggle();">Close</tv3-cta>
+        </div>
+      </section>
+    </form>
+  </article>
+</tv3-lightbox>
+<!-- Confirm Submit For Processing lightbox ends here -->
